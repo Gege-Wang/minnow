@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.24.2)
-
+# set compiler
+set(CMAKE_CXX_COMPILER "/usr/local/gcc-13.2/bin/g++")
 project(minnow CXX)
 
 if(${CMAKE_GENERATOR} STREQUAL "Unix Makefiles")
