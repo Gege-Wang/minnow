@@ -6,14 +6,18 @@ void TCPReceiver::receive( TCPSenderMessage message )
 {
   // Your code here.
   if(message.RST) {
-    is_error = true;
+    reassembler_.reader().set_error();
     return;
   }
   //set the ISN if necessary
   if(message.SYN) {
     has_syn_flag = true;
-    zero_point = Wrap32(message.seqno);
+    zero_point = message.seqno; // there is a bug here being
+    uint64_t index = 0;
+    reassembler_.insert(index, message.payload, message.FIN);
+    return;
   }
+  // discard all the messages before the SYN message arrived.
   if(!has_syn_flag) {
     return;
   }
@@ -41,7 +45,7 @@ TCPReceiverMessage TCPReceiver::send() const
   return TCPReceiverMessage{
     .ackno = ackno,
     .window_size = window_size,
-    .RST = is_error
+    .RST = reassembler_.reader().has_error() // there is a bug, because we should check whether the output has error
   };
 
 }

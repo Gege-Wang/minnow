@@ -46,7 +46,7 @@ public:
 private:
   ByteStream output_;                // the Reassembler writes to this ByteStream
   uint64_t first_unassembled_ { 0 }; // Reassembler start index
-  uint64_t last_bytes_index_ { UINT64_MAX };
+  uint64_t last_bytes_index_ { UINT64_MAX }; // the FIN seqno, when the last string arrive, we should record it.
   bool end_ { false };
   std::map<uint64_t, char> buffer_; // maybe you should consider a lot about this
 };

@@ -29,6 +29,6 @@ public:
 private:
   Reassembler reassembler_;
   Wrap32 zero_point {0};
-  bool is_error {false};
+  // bool is_error {false};  // we should pass the RST to reassembler_.writer(), so we can give it up;
   bool has_syn_flag {false};
 };

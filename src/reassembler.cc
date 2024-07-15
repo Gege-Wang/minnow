@@ -6,8 +6,9 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
 {
   // Your code here.
   if( data.size() == 0 ) {
-    if(is_last_substring) {
-      output_.writer().close();
+
+    if((end_ && is_last_substring )|| (is_last_substring && !first_index)) { // handle the SYN + FIN + empty string;
+      output_.writer().close(); // there is a bug because if we transmit a empty data with FIN, but we dont receive previous data, we should not close the bytestream
     }
     return;
   }

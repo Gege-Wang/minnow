@@ -252,6 +252,8 @@ int main()
 
       test.execute( ReadAll( "ab" ) );
       test.execute( Insert { "c", 2 }.is_last() );
+      test.execute( BytesPushed ( 3 ));
+      test.execute( BytesPending( 0 ));
       test.execute( ReadAll( "c" ) );
       test.execute( IsFinished { true } );
     }
