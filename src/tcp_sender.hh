@@ -40,7 +40,7 @@ public:
   }
 
   bool is_expired () {
-    return ticks > RTO_ms_;
+    return ticks >= RTO_ms_;   // expired =
   }
 
   void double_RTO() {
@@ -97,7 +97,7 @@ private:
   uint64_t initial_RTO_ms_;
   uint16_t window_size {1};
   uint64_t seqno {}; // the newest abs ackno;
-  uint64_t last_sent_ {};
+  uint64_t last_sent_ {}; // the last send abs seqno
   uint64_t sequence_numbers_in_flight_ {0}; // maintain the outstanding seq count, because we dont want to calculate it everytime;
   bool has_SYN {false};
   bool has_FIN {false};

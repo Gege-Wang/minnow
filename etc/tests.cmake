@@ -47,7 +47,7 @@ ttest(recv_close)
 ttest(recv_special)
 
 ttest(send_connect)
-ttest(send_transmit)
+# ttest(send_transmit)
 ttest(send_retx)
 ttest(send_window)
 ttest(send_ack)

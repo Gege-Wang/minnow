@@ -38,14 +38,24 @@ void TCPSender::push( const TransmitFunction& transmit )
     msg.seqno = Wrap32::wrap(0, isn_);
     msg.SYN  = true;
     has_SYN = true;
-    msg.FIN = input_.reader().is_finished() && !input_.writer().bytes_pushed();
+    has_FIN = input_.reader().is_finished() && !input_.writer().bytes_pushed();
+    msg.FIN = has_FIN;
     transmit(msg);
+
+    outstanding.push(msg);
+    // when push msg to outstanding queue, we should make sure to start timer.
+    if(!timer.is_running()) {
+      timer.start();
+    }
+    sequence_numbers_in_flight_ += 1;
+    last_sent_ = 0 + has_FIN;
+
     return;
   } else if(window_size == 0) {
-  // when window_size = 0, we should send a empty_message so that we can get the newest ackno;
-  TCPSenderMessage msg = make_empty_message(); 
-  transmit(msg);
-  return;
+    // when window_size = 0, we should send a empty_message so that we can get the newest ackno;
+    TCPSenderMessage msg = make_empty_message(); 
+    transmit(msg);
+    return;
   } else {
     uint64_t size = min(window_size - sequence_numbers_in_flight_, input_.reader().bytes_buffered());
     string sendmsg;
@@ -59,7 +69,7 @@ void TCPSender::push( const TransmitFunction& transmit )
         has_FIN = true;
       }
       TCPSenderMessage msg {
-        Wrap32::wrap(last_sent_, isn_),
+        Wrap32::wrap(last_sent_ + 1, isn_),
         !has_SYN,
         move(payload),
         has_FIN,
@@ -73,7 +83,7 @@ void TCPSender::push( const TransmitFunction& transmit )
         timer.start();
       }
       sequence_numbers_in_flight_ += len;
-      last_sent_ += len;
+      last_sent_ += len + has_FIN; // there is a bug, you should record the FIN seqno
 
       // cut the sendmsg
       sendmsg = sendmsg.substr(len);
@@ -92,7 +102,7 @@ TCPSenderMessage TCPSender::make_empty_message() const
   // maybe there should be more simple
   // this is the next seqno should be sent to receiver, and should be rejected because the window size 
   // is zero
-  Wrap32 empty_seqno = Wrap32::wrap(seqno, isn_);
+  Wrap32 empty_seqno = Wrap32::wrap(last_sent_ + 1, isn_);
   bool SYN = false;
   string payload = {};
   bool FIN = false;
@@ -121,16 +131,6 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
     uint64_t last_seqno = seqno;
     seqno = msg.ackno.value().unwrap(isn_, last_seqno);
 
-    // when all the segment in outstanding are acknowagement, the retransmission timer should be stopped
-    if(seqno > last_sent_) {
-      // stop the timer
-      timer.stop();
-      while(!outstanding.empty()) {
-        outstanding.pop();
-      }
-      return;
-    }
-
     // when the ackno is greater than previous, we should:
     // (a) set RTO to initial
     // (b) if the outstanding is not empty, start the retransmission timer
@@ -141,12 +141,25 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
       retransmissions_cnt_ = 0;
     }
 
+    // when all the segment in outstanding are acknowagement, the retransmission timer should be stopped
+    if(seqno > last_sent_) {
+      // stop the timer
+      timer.stop();
+      while(!outstanding.empty()) {
+        outstanding.pop();
+      }
+      sequence_numbers_in_flight_ = 0;
+      return;
+    }
+
+
     // we should move the string in outstand according to the ackno
     while(!outstanding.empty()) {
       TCPSenderMessage next = outstanding.front();
       
-      if(seqno > next.seqno.unwrap(isn_, last_seqno) + next.sequence_length()) {
+      if(seqno > next.seqno.unwrap(isn_, last_seqno) + next.sequence_length() - 1) {  // there is a bug if(seqno > next.seqno.unwrap(isn_, last_seqno) + next.sequence_length()) 
         outstanding.pop();
+        sequence_numbers_in_flight_ -= next.sequence_length();
       } else {
         break;
       }
@@ -168,8 +181,8 @@ void TCPSender::tick( uint64_t ms_since_last_tick, const TransmitFunction& trans
   if(timer.is_expired()) {
     if(!outstanding.empty()) {
       transmit(outstanding.front());
-      outstanding.pop();
-      if(!window_size) {
+      //outstanding.pop();  // don't pop outstanding unless you receive the ackno
+      if(window_size) { // there is a bug not if(!windown_size)
         retransmissions_cnt_++;
         timer.double_RTO();
       }
