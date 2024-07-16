@@ -66,6 +66,9 @@ void TCPSender::push( const TransmitFunction& transmit )
     }
     transmit(msg);
     outstanding.push(msg);
+    if(!timer.is_running()) {
+      timer.start();
+    }
     sequence_numbers_in_flight_ += msg.sequence_length();
     last_sent_ += msg.sequence_length() - msg.SYN;
     return;

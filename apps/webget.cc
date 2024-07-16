@@ -1,4 +1,5 @@
 #include "socket.hh"
+#include "tcp_minnow_socket.hh"
 
 #include <cstdlib>
 #include <iostream>
@@ -16,7 +17,7 @@ void get_URL( const string& host, const string& path )
   Address address( host, service );
 
   // make socket
-  TCPSocket webSocket;
+  CS144TCPSocket webSocket;
   webSocket.connect( address );
 
   // make http request

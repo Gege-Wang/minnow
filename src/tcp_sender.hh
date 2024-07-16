@@ -30,7 +30,7 @@ public:
   }
   void tick(uint64_t ms_since_last_tick) {
     if(!is_running_) {
-      std::cout << "timer is not running, please start timer first!\n";
+      std::cerr << "timer is not running, please start timer first!\n";
     }
     ticks += ms_since_last_tick;
   }
@@ -54,7 +54,7 @@ private:
   uint64_t initial_RTO_ms_;
   uint64_t RTO_ms_; // the current RTO_ms
   uint64_t ticks; // the ticks passed since the start 
-  bool is_running_ {false};
+  bool is_running_ {true};
 
 };
 

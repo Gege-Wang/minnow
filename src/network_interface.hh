@@ -1,6 +1,7 @@
 #pragma once
 
 #include <queue>
+#include <unordered_map>
 
 #include "address.hh"
 #include "ethernet_frame.hh"
@@ -81,4 +82,16 @@ private:
 
   // Datagrams that have been received
   std::queue<InternetDatagram> datagrams_received_ {};
+
+  // Datagrams that wait to be send.  multi to one , you must use uint32_t, not Address, because Address doesn't have constructor function
+  std::unordered_multimap<uint32_t, InternetDatagram> datagrams_to_send_ {};
+
+  // IP and MAC address map, peer to peer
+  std::unordered_map<uint32_t, EthernetAddress> arp_cache_ {};
+
+  // record the arp_cache_time
+  std::unordered_map<uint32_t, uint32_t> arp_cache_timer_ {};
+
+  // record the arp_time
+  std::unordered_map<uint32_t, uint32_t>arp_timer_ {};
 };
