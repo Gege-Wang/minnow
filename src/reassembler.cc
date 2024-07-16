@@ -23,7 +23,8 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
   }
   for ( size_t i = 0; i < data.size(); i++ ) {
     if ( first_index + i >= first_unassembled_ && first_index + i < first_unacceptable_ ) {
-      buffer_[first_index + i] = data[i];
+      if(!buffer_[first_index + i])
+        buffer_[first_index + i] = data[i];
     }
   }
   // else we discard it.

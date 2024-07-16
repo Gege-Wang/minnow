@@ -30,7 +30,7 @@ public:
   }
   void tick(uint64_t ms_since_last_tick) {
     if(!is_running_) {
-      std::cout << "timer is not runnint, please start timer first!\n";
+      std::cout << "timer is not running, please start timer first!\n";
     }
     ticks += ms_since_last_tick;
   }
