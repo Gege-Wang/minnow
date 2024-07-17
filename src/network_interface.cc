@@ -33,7 +33,7 @@ void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Addre
 
   // look up for the next_hop ethernet address. first look up in the cache, send it right away.
 
-  if(arp_cache_.find(next_hop.ipv4_numeric()) != arp_cache_.end()) {
+  if(arp_cache_.contains(next_hop.ipv4_numeric())) {
     // convert dgram to ethernet frame,
     EthernetHeader ethernet_header {
       .dst = arp_cache_[next_hop.ipv4_numeric()],
@@ -48,7 +48,7 @@ void NetworkInterface::send_datagram( const InternetDatagram& dgram, const Addre
     transmit(ethernet_frame);
   } else {
     datagrams_to_send_.emplace(next_hop.ipv4_numeric(), dgram);
-    if(arp_timer_.find(next_hop.ipv4_numeric()) != arp_timer_.end() && arp_timer_[next_hop.ipv4_numeric()] < 5000) {
+    if(arp_timer_.contains(next_hop.ipv4_numeric())  && arp_timer_[next_hop.ipv4_numeric()] < 5000) {
       return;
     }
     // if you can not find ethernet address in cache, send a arp request, add the datagram to send_queue, and wait for arp reply;
@@ -86,11 +86,11 @@ void NetworkInterface::recv_frame( const EthernetFrame& frame )
   // parse the ethernet frame header, see the type
   EthernetHeader ethernet_header = frame.header;
   
-  if((ethernet_header.dst != ethernet_address_) || (ethernet_header.dst != ETHERNET_BROADCAST)) {
+  if((ethernet_header.dst != ethernet_address_) && (ethernet_header.dst != ETHERNET_BROADCAST)) {
     return;
   }
   // if the type is ipv4, we should check if the destination is my, if yes we should parse the inbound frame and push it to receive queue
-  if(ethernet_header.type == EthernetHeader::TYPE_IPv4 || ethernet_header.dst == ethernet_address_) {
+  if(ethernet_header.type == EthernetHeader::TYPE_IPv4 && ethernet_header.dst == ethernet_address_) {
     InternetDatagram ip_msg;
     bool parse_result = parse(ip_msg, frame.payload);
     if(!parse_result) {
@@ -110,7 +110,6 @@ void NetworkInterface::recv_frame( const EthernetFrame& frame )
     // we should give the arp_cache_ a timestamp
     if ( datagrams_to_send_.contains( arp_msg.sender_ip_address ) ) {
       auto range = datagrams_to_send_.equal_range( arp_msg.sender_ip_address );
-      cout<<"test"<<endl;
       for ( auto i = range.first; i != range.second; i++ ) {
         EthernetHeader send_ethernet_header {
           .dst = arp_msg.sender_ethernet_address,
@@ -130,7 +129,7 @@ void NetworkInterface::recv_frame( const EthernetFrame& frame )
 
     // if the type is reply, we don't need to the following thing.
     // if the type is arp and is request, we should check the destination is my
-    if(arp_msg.opcode == ARPMessage::OPCODE_REQUEST && ethernet_header.dst == ethernet_address_) {
+    if(arp_msg.opcode == ARPMessage::OPCODE_REQUEST && arp_msg.target_ip_address == ip_address_.ipv4_numeric()) {
       // then we should send arp reply to src
       ARPMessage arp_reply_message {
         .opcode = ARPMessage::OPCODE_REPLY,
@@ -159,15 +158,24 @@ void NetworkInterface::recv_frame( const EthernetFrame& frame )
 void NetworkInterface::tick( const size_t ms_since_last_tick )
 {
   // Your code here.
-  for(auto it = arp_cache_timer_.begin(); it != arp_cache_timer_.end(); it++) {
-    if(it -> second + ms_since_last_tick >= 30000) {
-      arp_cache_timer_.erase(it);
+  for(auto it = arp_cache_timer_.begin(); it != arp_cache_timer_.end(); ) {
+    it -> second += ms_since_last_tick;
+    if(it -> second >= 30000) {
+      auto cache_it = arp_cache_.find(it -> first);
+      if (cache_it != arp_cache_.end())
+        arp_cache_.erase(cache_it);
+      it = arp_cache_timer_.erase(it);  // there is a bug, we should not use arp_cache_timer_.erase(it);
+    } else {
+      it++;
     }
   }
 
-  for(auto it = arp_timer_.begin(); it != arp_timer_.end(); it++) {
-    if(it -> second + ms_since_last_tick >= 5000) {
-      arp_timer_.erase(it);
+  for(auto it = arp_timer_.begin(); it != arp_timer_.end(); ) {
+    it -> second += ms_since_last_tick;
+    if(it -> second >= 5000) {
+      it = arp_timer_.erase(it);
+    } else {
+      it++;
     }
   }
 }
