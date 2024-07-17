@@ -35,4 +35,22 @@ public:
 private:
   // The router's collection of network interfaces
   std::vector<std::shared_ptr<NetworkInterface>> _interfaces {};
+  struct route_table_entry{
+    uint32_t route_prefix;
+    uint8_t prefix_length;
+    std::optional<Address> next_hop;
+    size_t interface_num;
+
+    route_table_entry()
+        : route_prefix(0), prefix_length(0), next_hop(std::nullopt), interface_num(0) {
+        // 其他初始化逻辑，如果需要的话
+    }
+    route_table_entry(uint32_t prefix, uint8_t length, std::optional<Address> hop, size_t num)
+        : route_prefix(prefix), prefix_length(length), next_hop(hop), interface_num(num) {}
+  };
+  std::vector<route_table_entry> route_table_ {};
+
+  std::optional<route_table_entry> longest_prefix_match (uint32_t ip_address);
+
+
 };
